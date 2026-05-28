@@ -315,7 +315,9 @@ function App() {
     if(!analyst.trim()){setSyncMsg({t:'err',m:'⚠️ Ingresa tu nombre de analista.'});return;}
     setSyncMsg({t:'load',m:'⏳ Enviando a Google Sheets...'});
     const finM=bracket?.fin?.[0];
+    const terM=bracket?.ter?.[0];
     const subcampeon=finM?.winner?(finM.t1?.name===finM.winner?finM.t2?.name:finM.t1?.name):null;
+    const tercero=terM?.winner?terM.winner:null;
     
     const extract = matches => matches.map(m=>({llave:m.id, local:m.t1?.name||'?', visitante:m.t2?.name||'?', ganador:m.winner||null}));
     
@@ -324,6 +326,7 @@ function App() {
       nombre:analyst,
       campeon:champion||'(sin definir)',
       subcampeon:subcampeon||'(pendiente)',
+      tercero:tercero||'(pendiente)',
       faseGrupos:Object.fromEntries(Object.keys(GRUPOS_DATA).map(g=>[g,
         standings[g].map((idx,r)=>({puesto:r+1, equipo:GRUPOS_DATA[g][idx]}))
       ])),
@@ -338,7 +341,7 @@ function App() {
     };
     
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbwH7mxlyGiZd4q4mW3L1laWEcEwcHBo8u1BGw0Upt8Du2m01D77dEWhJJL16Ii69HHR/exec',
+      await fetch('https://script.google.com/macros/s/AKfycbw_CPjtc4GYZDMZR1YVshnO8BlSVQcnaquoofEJ2IEJB0jCtbtq72m0flWs2tNnJ7CS/exec',
         {method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       setSyncMsg({t:'ok',m:'✅ ¡Predicción guardada correctamente!'});
       setTimeout(()=>setSyncOpen(false),2000);
@@ -591,7 +594,7 @@ function Step3({bracket,champion,advance,onPrev,onSync}) {
         </div>
       </div>
 
-      {champion&&<ChampionReveal champion={champion} onSync={onSync}/>}
+      {champion&&<ChampionReveal champion={champion} bracket={bracket} onSync={onSync}/>}
     </div>
   );
 }
@@ -681,7 +684,7 @@ function TeamRow({name,lbl,h,isW,isL,onClick,canUndo}){
   );
 }
 
-function ChampionReveal({champion, onSync}) {
+function ChampionReveal({champion, bracket, onSync}) {
   return (
     <div style={{textAlign:'center', marginTop:14}} className="fade-up">
       <div className="champ-glow" style={{display:'inline-block',borderRadius:20,
@@ -691,8 +694,11 @@ function ChampionReveal({champion, onSync}) {
         <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.22em',color:'#f59e0b',marginBottom:10,textTransform:'uppercase'}}>
           CAMPEÓN DEL MUNDO 2026
         </div>
-        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:28,fontWeight:900}}>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:28,fontWeight:900,marginBottom:8}}>
           {flag(champion)} {champion}
+        </div>
+        <div style={{fontSize:12,color:'#d1d5db',fontWeight:600}}>
+          {bracket?.ter?.[0]?.winner ? `🥉 3º: ${flag(bracket.ter[0].winner)} ${bracket.ter[0].winner}` : '🥉 3º: (pendiente)'}
         </div>
         <button onClick={onSync} style={{marginTop:22,background:'linear-gradient(135deg,#f59e0b,#d97706)',
           border:'none',color:'#fff',padding:'13px 32px',borderRadius:12,cursor:'pointer',fontWeight:700,fontSize:14}}>
@@ -707,11 +713,14 @@ function ChampionReveal({champion, onSync}) {
 function SyncModal({analyst,setAnalyst,msg,onClose,onSync,bracket,champion,thirds,teamAt}){
   const msgColor=msg?.t==='ok'?'#4ade80':msg?.t==='err'?'#f87171':'#94a3b8';
   const finM=bracket?.fin?.[0];
+  const terM=bracket?.ter?.[0];
   const subcampeon=finM?.winner?(finM.t1?.name===finM.winner?finM.t2?.name:finM.t1?.name):null;
+  const tercero=terM?.winner?terM.winner:null;
   const r32pending=[...bracket.L.r32, ...bracket.R.r32].filter(m=>!m.winner).length;
   const rows=[
     {icon:'🏆',label:'Campeón',val:champion?`${flag(champion)} ${champion}`:'(sin definir)',hi:!!champion},
     {icon:'🥈',label:'Subcampeón',val:subcampeon?`${flag(subcampeon)} ${subcampeon}`:'(pendiente)',hi:!!subcampeon},
+    {icon:'🥉',label:'3º Puesto',val:tercero?`${flag(tercero)} ${tercero}`:'(pendiente)',hi:!!tercero},
     {icon:'🎯',label:'Mejores 3ºs',val:thirds.size?[...thirds].map(g=>teamAt(g,3)).join(', '):'—',hi:thirds.size===8},
     {icon:'📋',label:'Partidos R32',val:r32pending===0?'Todos resueltos ✓':`${r32pending} sin ganador`,hi:r32pending===0},
   ];
